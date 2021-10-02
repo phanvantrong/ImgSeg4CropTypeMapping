@@ -7,7 +7,8 @@ Corn and Soybean Mapping model at 30 m resolution from Landsat 8/ Sentinel 2
 **UNETModel.py** - The UNET image segmentation model.
 
 **deeplabModel.py** - The ResNet50 image segmentation model.
-***resnet50*** - The ResNet50 backbone for deepLabV3 model.
+
+    ***resnet50.py*** - The ResNet50 backbone for deepLabV3 model.
 
 **confusion_matrix.py** - includes helper functions to save a confusion matrix image as part of the logs that can be monitored via tensorboard.
 
