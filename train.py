@@ -1,5 +1,6 @@
 import numpy as np
 import sklearn.metrics
+import tensorflow_addons as tfa
 import tensorflow as tf
 from datetime import datetime
 import os
@@ -9,7 +10,8 @@ from tensorflow.python.keras import metrics
 from tensorflow.python.keras import models
 from tensorflow.python.keras import optimizers
 from confusion_matrix import plot_confusion_matrix, plot_to_image
-from model import get_model
+from UNETModel import unet_model
+from deeplabModel import DeepLabV3Plus
 
 '''
   DATA SET LOADING FUNCTIONS
@@ -45,7 +47,7 @@ def get_eval_dataset(cm=False):
 
 # # Specify Config Variables for Data and Model Paths
 SOURCE = 'l8-data' ## update this for new data source
-JOB_FOLDER = 'xx_yy_zz'  ## update this for new models
+JOB_FOLDER = 'Deeplab_FTLoss_g090'  ## update this for new models
 JOB_DIR = JOB_FOLDER + '/trainer'
 MODEL_DIR = JOB_DIR + '/model'
 LOGS_DIR = JOB_DIR + '/logs'
@@ -128,7 +130,8 @@ with strat.scope():
             tf.keras.metrics.Precision(name='precision'),
             tf.keras.metrics.Recall(name='recall'),
             # tf.keras.metrics.AUC(name='auc'),
-            tf.keras.metrics.AUC(name='prc', curve='PR')
+            tf.keras.metrics.AUC(name='prc', curve='PR'),
+            tfa.metrics.F1Score(NCLASS, average='micro')
             ]
 
   # Tversky Loss defined as Custom Loss Function (alpha=beta=0.5 => Dice Loss)
@@ -149,14 +152,16 @@ with strat.scope():
       return Ncl-T
   
   # Focal Tversky Loss (to customize focus on easier or harder examples) defined as Custom Loss Function (alpha=beta=0.5 => Dice Loss)
-  def focal_tversky_loss(y_true, y_pred, gamma=0.75):
+  def focal_tversky_loss(y_true, y_pred, gamma=0.9):
     tv = tversky_loss(y_true, y_pred)
     return tf.math.pow(tv, gamma)
 
-  m = get_model(BANDS, NCLASS)
+  # m = unet_model(BANDS, NCLASS)
+  m = DeepLabV3Plus(KERNEL_SIZE, KERNEL_SIZE, len(BANDS), NCLASS)
+  print(m.summary())
   m.compile(
     optimizer=optimizers.get(OPTIMIZER), 
-    loss=tversky_loss,
+    loss=focal_tversky_loss,
     # loss = losses.get(LOSS),
     metrics=[metric for metric in METRICS])
 
@@ -191,7 +196,8 @@ with strat.scope():
       validation_data=evaluation,
       validation_steps=int(EVAL_SIZE / BATCH_SIZE),
       validation_freq=1,
-      callbacks=[tf.keras.callbacks.TensorBoard(LOGS_DIR), cp_callback,  cm_callback])
+      callbacks=[tf.keras.callbacks.TensorBoard(LOGS_DIR), cp_callback,  cm_callback],
+    )
 
   m.save(MODEL_DIR, save_format='tf')
 

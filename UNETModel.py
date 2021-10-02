@@ -31,7 +31,7 @@ def decoder_block(input_tensor, concat_tensor, num_filters):
     decoder = layers.Activation('relu')(decoder)
     return decoder
 
-def get_model(BANDS, NCLASS):
+def unet_model(BANDS, NCLASS):
     inputs = layers.Input(shape=[None, None, len(BANDS)]) # 256
     encoder0_pool, encoder0 = encoder_block(inputs, 32) # 128
     encoder1_pool, encoder1 = encoder_block(encoder0_pool, 64) # 64
