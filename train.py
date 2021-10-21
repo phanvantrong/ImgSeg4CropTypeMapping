@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import sklearn.metrics
 import tensorflow_addons as tfa
 import tensorflow as tf
@@ -38,7 +39,7 @@ def get_training_dataset():
 	dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE).repeat()
 	return dataset
 
-def get_eval_dataset(cm=False):
+def get_eval_dataset():
   glob =  FOLDER + '/' + EVAL_BASE + '*'
   dataset = get_dataset(glob)
   dataset = dataset.batch(BATCH_SIZE).repeat()
@@ -51,6 +52,7 @@ JOB_FOLDER = 'Deeplab_FTLoss_g090'  ## update this for new models
 JOB_DIR = JOB_FOLDER + '/trainer'
 MODEL_DIR = JOB_DIR + '/model'
 LOGS_DIR = JOB_DIR + '/logs'
+HIST_DIR = JOB_DIR + '/history'
 checkpoint_path = JOB_DIR + "/checkpoints/cp-{epoch:04d}.ckpt"
 checkpoint_dir = os.path.dirname(checkpoint_path)
 
@@ -189,7 +191,7 @@ with strat.scope():
 
   m.save_weights(checkpoint_path.format(epoch=0))
   # START TRAINING
-  m.fit(
+  history = m.fit(
       x=training,
       epochs=EPOCHS, 
       steps_per_epoch=int(TRAIN_SIZE / BATCH_SIZE), 
@@ -198,6 +200,12 @@ with strat.scope():
       validation_freq=1,
       callbacks=[tf.keras.callbacks.TensorBoard(LOGS_DIR), cp_callback,  cm_callback],
     )
-
+  
+  # save history into a CSV file
+  hist_df = pd.DataFrame(history.history) 
+  hist_csv_file = HIST_DIR +'/' + EPOCHS + '-epochs.csv'
+  with open(hist_csv_file, mode='w') as f:
+    hist_df.to_csv(f)
+  
   m.save(MODEL_DIR, save_format='tf')
 
